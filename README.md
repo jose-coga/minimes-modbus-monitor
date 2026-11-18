@@ -82,5 +82,4 @@ Abre tu navegador web y accede a:
 ## Autor
 
 **Jose O. Corpus** — Ingeniero en Mecatrónica | Desarrollador Senior .NET / C# & Sistemas de Manufactura (MES / IIoT)  
-* **LinkedIn:** [://linkedin.com](https://://linkedin.com)  
-* **Ubicación:** Santa Catarina, Nuevo León, México
+* **LinkedIn:** [https://www.linkedin.com/in/josecoga](https://www.linkedin.com/in/josecoga)  
