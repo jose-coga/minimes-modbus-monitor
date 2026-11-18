@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<title>MiniMES - Monitor de Línea de Tiempo Real</title>
+	<style>
+		body { font-family: 'Segoe UI', sans-serif; background: #12161f; color: #e2e8f0; margin: 0; padding: 20px; }
+		.header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2d3748; padding-bottom: 15px; }
+		.badge { padding: 8px 16px; border-radius: 6px; font-weight: bold; font-size: 1.1em; }
+		.run { background: #166534; color: #4ade80; }
+		.stop { background: #991b1b; color: #fca5a5; }
+		.warn { background: #854d0e; color: #fde047; }
+		.alert-box { background: #1e293b; border-left: 5px solid #38bdf8; padding: 12px 20px; margin: 15px 0; border-radius: 4px; font-weight: 500; }
+		.alert-danger { border-left-color: #ef4444; background: #450a0a; color: #fecaca; }
+		.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+		.card { background: #1e293b; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+		.card h3 { margin: 0; font-size: 0.9em; color: #94a3b8; text-transform: uppercase; }
+		.card p { margin: 10px 0 0; font-size: 2.2em; font-weight: bold; color: #f8fafc; }
+		.controls { display: flex; gap: 15px; margin-bottom: 20px; }
+		button { padding: 12px 24px; font-size: 1em; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+		.btn-start { background: #22c55e; color: #052e16; }
+		.btn-start:hover { background: #16a34a; }
+		.btn-stop { background: #ef4444; color: white; }
+		.btn-stop:hover { background: #dc2626; }
+		table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 8px; overflow: hidden; }
+		th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #334155; }
+		th { background: #0f172a; color: #94a3b8; }
+		.ok { color: #4ade80; font-weight: bold; }
+		.fail { color: #f87171; font-weight: bold; }
+	</style>
+</head>
+<body>
+	<div class="header">
+		<h1>Panel de Control MES — Celda de Manufactura 01</h1>
+		<div id="estadoBadge" class="badge run">CONECTANDO...</div>
+	</div>
+
+	<div id="alertaBox" class="alert-box">Esperando datos del PLC...</div>
+
+	<div class="controls">
+		<button class="btn-start" onclick="enviarComando('start')">▶ Arrancar Máquina (PLC)</button>
+		<button class="btn-stop" onclick="enviarComando('stop')">■ Paro de Emergencia (PLC)</button>
+	</div>
+
+	<div class="grid">
+		<div class="card"><h3>Calidad OEE</h3><p id="oeeVal">100%</p></div>
+		<div class="card"><h3>Piezas Totales</h3><p id="totalesVal">0</p></div>
+		<div class="card"><h3>Piezas Scrap</h3><p id="scrapVal">0</p></div>
+		<div class="card"><h3>Temp. Motor Actual</h3><p id="tempVal">0°C</p></div>
+	</div>
+
+	<h2>Registro de Trazabilidad en Vivo (SQLite)</h2>
+	<table>
+		<thead>
+			<tr>
+				<th>Fecha y Hora</th>
+				<th>Número de Serie (Trazabilidad)</th>
+				<th>Temperatura</th>
+				<th>Resultado Calidad</th>
+			</tr>
+		</thead>
+		<tbody id="tablaLogs"></tbody>
+	</table>
+
+	<script>
+		async function enviarComando(cmd) {
+			await fetch(`/api/control/${cmd}`, { method: 'POST' });
+			actualizarDashboard();
+		}
+
+		async function actualizarDashboard() {
+			try {
+				const resStatus = await fetch('/api/status');
+				const st = await resStatus.json();
+
+				document.getElementById('oeeVal').innerText = st.calidadOEE + '%';
+				document.getElementById('totalesVal').innerText = st.totales;
+				document.getElementById('scrapVal').innerText = st.scrap;
+				document.getElementById('tempVal').innerText = st.temperatura + '°C';
+
+				const badge = document.getElementById('estadoBadge');
+				if (st.estado === 0) {
+					badge.className = 'badge stop';
+					badge.innerText = 'MÁQUINA DETENIDA';
+				} else if (st.estado === 2) {
+					badge.className = 'badge warn';
+					badge.innerText = 'ALERTA TEMPERATURA';
+				} else {
+					badge.className = 'badge run';
+					badge.innerText = 'EN PRODUCCIÓN';
+				}
+
+				const alertaBox = document.getElementById('alertaBox');
+				alertaBox.innerText = st.alerta;
+				alertaBox.className = st.estado === 0 ? 'alert-box alert-danger' : 'alert-box';
+
+				const resLogs = await fetch('/api/logs');
+				const logs = await resLogs.json();
+				const tbody = document.getElementById('tablaLogs');
+				tbody.innerHTML = logs.map(l => `
+					<tr>
+						<td>${l.fechaHora}</td>
+						<td><strong>${l.numeroSerie}</strong></td>
+						<td>${l.temperatura}°C</td>
+						<td class="${l.resultado === 'APROBADA' ? 'ok' : 'fail'}">${l.resultado}</td>
+					</tr>
+				`).join('');
+			} catch (e) {
+				console.error(e);
+			}
+		}
+
+		setInterval(actualizarDashboard, 1000);
+		actualizarDashboard();
+	</script>
+</body>
+</html>
