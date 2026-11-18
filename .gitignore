@@ -1,0 +1,26 @@
+# .NET / C#
+bin/
+obj/
+MotorMes/.open
+*.user
+*.suo
+
+# Bases de datos locales
+*.db
+*.db-shm
+*.db-wal
+
+# Python y entornos virtuales
+miniMesEnv/
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Editores y Sistema
+.vscode/
+.idea/
+.DS_Store
+
+# Access token
+token
